@@ -1,32 +1,28 @@
-const express = require('express')
-const mongoose = require('mongoose')
+const { MongoClient } = require('mongodb');
+require('dotenv').config()
 
+// Replace the uri string with your connection string.
+const uri = process.env.CONNECTION_STRING;
+const client = new MongoClient(uri);
 
-main().catch(err => console.log(err));
+async function run() {
+  try {
+    // Connect to the MongoDB cluster
+    await client.connect();
 
-async function main() {
-  await mongoose.connect('');
+    // Make the appropriate DB calls
+    const database = client.db("papers");
+    const collection = database.collection("ungraded");
 
-  // use `await mongoose.connect('mongodb://user:password@127.0.0.1:27017/test');` if your database has auth enabled
+    // Example: Insert a document
+    const doc = { name: "Apple", color: "Green" };
+    const result = await collection.insertOne(doc);
+
+    console.log(`New document created with the following id: ${result.insertedId}`);
+  } finally {
+    // Ensures that the client will close when you finish/error
+    await client.close();
+  }
 }
 
-/**
- *  0: disconnected
-    1: connected
-    2: connecting
-    3: disconnecting
- */
-const kittySchema = new mongoose.Schema({
-    name: String
-});
-const Kitten = mongoose.model('Kitten', kittySchema);
-const silence = new Kitten({ name: 'Silence' });
-console.log(silence.name); // 'Silence'
-// initialize the app
-const app = express()
-
-app.get('/', function (req, res) {
-  res.send('Hello World')
-})
-
-app.listen(3000)
+run().catch(console.dir);
