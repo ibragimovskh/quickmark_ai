@@ -17,16 +17,19 @@ export default function FileUpload() {
         formData.append("file", file);
         try { 
             // Attempt to send the file to the server
-            const response = fetch('/upload', { 
+            // here, you need to specify the destination of the server
+            // otherwise, it will send it to localhost:5173
+            const response = await fetch('http://localhost:3000/upload/', { 
                 method: "POST", // for sending data
                 body: formData
             });
 
-            if(response.ok) { 
-                alert("File was uploaded Successfully");
-            }else { 
-                alert("File Upload Failed");
-            }
+            if (response.ok) {
+                const responseData = await response.json(); // Convert response to JSON
+                console.log('File Uploaded Successfully', responseData);
+              } else {
+                console.log('File upload failed', response);
+              }
         }catch(e) { 
             console.error('Error during file upload:', e);
         }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import "./FileUpload"
+import FileUpload from"./FileUpload"
 import './App.css'
 
 
