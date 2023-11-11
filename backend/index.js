@@ -1,28 +1,14 @@
-const { MongoClient } = require('mongodb');
-require('dotenv').config()
+const express = require("express"); 
+// we use multer to handle "multipart/form-data" which is required for file uploads
+const multer = require("multer");
+const upload = multer({ dest: 'uploads/' }); // configure storage options
 
-// Replace the uri string with your connection string.
-const uri = process.env.CONNECTION_STRING;
-const client = new MongoClient(uri);
+// What exactly happens when I do this? 
+const app = express();
 
-async function run() {
-  try {
-    // Connect to the MongoDB cluster
-    await client.connect();
+app.post('upload/', upload.single('file'), (req,res)=>{
+  res.status(200).json({ message: "File uploaded successfully" }); 
+});
 
-    // Make the appropriate DB calls
-    const database = client.db("papers");
-    const collection = database.collection("ungraded");
-
-    // Example: Insert a document
-    const doc = { name: "Apple", color: "Green" };
-    const result = await collection.insertOne(doc);
-
-    console.log(`New document created with the following id: ${result.insertedId}`);
-  } finally {
-    // Ensures that the client will close when you finish/error
-    await client.close();
-  }
-}
-
-run().catch(console.dir);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
