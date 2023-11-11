@@ -39,9 +39,9 @@ export default function FileUpload() {
     return (
         // we always submit the form, not the input
         // that's why handleFileSubmit is on form
-        <form onSubmit={handleFileSubmit}>
+        <form onSubmit={handleFileSubmit} className="mt-6 ">
             <input type="file" onChange={handleFileChange} id="document" name="avatar" accept="image/png, image/jpeg"/>
-            <button type="submit">Upload</button>
+            <button type="submit" className="border-solid border-2 border-indigo-600">Upload</button>
         </form>
     )
 }

@@ -7,6 +7,7 @@ function App() {
 
   return (
     <>
+      <h1 className='underline decoration-dotted '>Quickmark AI</h1>
       <FileUpload /> 
     </>
   )
