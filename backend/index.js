@@ -12,7 +12,6 @@ const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.BLO
 const containerName = "images";
 // can't anonymously access blob storage without a token
 const sasToken = process.env.SAS_TOKEN;
-const imageUrl = "https://aiclassroom.blob.core.windows.net/images/file-1699991780927.jpg?" + sasToken; 
 // object that provides methods to interact with a specific container('imgages') in the Blob Storage service
 const containerClient = blobServiceClient.getContainerClient(containerName);
 
@@ -30,132 +29,13 @@ const ApiKeyCredentials = require('@azure/ms-rest-js').ApiKeyCredentials;
 const key = process.env.VISION_KEY;
 const endpoint = process.env.VISION_ENDPOINT;
 const computerVisionClient = new ComputerVisionClient(
-  new ApiKeyCredentials({ inHeader: { 'Ocp-Apim-Subscription-Key': key } }), endpoint);
+new ApiKeyCredentials({ inHeader: { 'Ocp-Apim-Subscription-Key': key } }), endpoint);
 
-  const async = require('async');
-  const fs = require('fs');
-  const https = require('https');
-  const createReadStream = require('fs').createReadStream
-  const sleep = require('util').promisify(setTimeout);
-
-  function computerVision() {
-    async.series([
-      async function () {
-  
-        /**
-         * OCR: READ PRINTED & HANDWRITTEN TEXT WITH THE READ API
-         * Extracts text from images using OCR (optical character recognition).
-         */
-        console.log('-------------------------------------------------');
-        console.log('READ PRINTED, HANDWRITTEN TEXT AND PDF');
-        console.log();
-  
-        // URL images containing printed and/or handwritten text. 
-        // The URL can point to image files (.jpg/.png/.bmp) or multi-page files (.pdf, .tiff).
-  
-        // Recognize text in printed image from a URL
-        console.log('Read printed text from URL...', imageUrl.split('/').pop());
-        const printedResult = await readTextFromURL(computerVisionClient, imageUrl);
-        printRecText(printedResult);
-  
-        // Perform read and await the result from URL
-        async function readTextFromURL(client, url) {
-          // To recognize text in a local image, replace client.read() with readTextInStream() as shown:
-          let result = await client.read(url);
-          // Operation ID is last path segment of operationLocation (a URL)
-          let operation = result.operationLocation.split('/').slice(-1)[0];
-  
-          // Wait for read recognition to complete
-          // result.status is initially undefined, since it's the result of read
-          while (result.status !== "succeeded") { await sleep(1000); result = await client.getReadResult(operation); }
-          return result.analyzeResult.readResults; // Return the first page of result. Replace [0] with the desired page if this is a multi-page file such as .pdf or .tiff.
-        }
-  
-        // Prints all text from Read result
-        function printRecText(readResults) {
-          console.log('Recognized text:');
-          for (const page in readResults) {
-            if (readResults.length > 1) {
-              console.log(`==== Page: ${page}`);
-            }
-            const result = readResults[page];
-            if (result.lines.length) {
-              for (const line of result.lines) {
-                console.log(line.words.map(w => w.text).join(' '));
-              }
-            }
-            else { console.log('No recognized text.'); }
-          }
-        }
-  
-        /**
-         * 
-         * Download the specified file in the URL to the current local folder
-         * 
-         */
-        function downloadFilesToLocal(url, localFileName) {
-          return new Promise((resolve, reject) => {
-            console.log('--- Downloading file to local directory from: ' + url);
-            const request = https.request(url, (res) => {
-              if (res.statusCode !== 200) {
-                console.log(`Download sample file failed. Status code: ${res.statusCode}, Message: ${res.statusMessage}`);
-                reject();
-              }
-              var data = [];
-              res.on('data', (chunk) => {
-                data.push(chunk);
-              });
-              res.on('end', () => {
-                console.log('   ... Downloaded successfully');
-                fs.writeFileSync(localFileName, Buffer.concat(data));
-                resolve();
-              });
-            });
-            request.on('error', function (e) {
-              console.log(e.message);
-              reject();
-            });
-            request.end();
-          });
-        }
-  
-        /**
-         * END - Recognize Printed & Handwritten Text
-         */
-        console.log();
-        console.log('-------------------------------------------------');
-        console.log('End of quickstart.');
-  
-      },
-      function () {
-        return new Promise((resolve) => {
-          resolve();
-        })
-      }
-    ], (err) => {
-      throw (err);
-    });
-  }
-  
-  computerVision();
-
-// async function some() { 
-
-//   const imageUrl = "https://aiclassroom.blob.core.windows.net/images/file-1699991780927.jpg";
-//   //object with text read by azure computer vision
-//   const readResults = await computerVisionClient.read(imageUrl);
-//   const operationId = readResults.operationLocation.split('/').slice(-1)[0];
-  
-//   let result = await computerVisionClient.getReadResult(operationId);
-//   while (result.status !== 'succeeded') {
-//     result = await computerVisionClient.getReadResult(operationId);
-//   }
-//   // Extracted Text
-//   const textResults = result.analyzeResult.readResults;
-//   console.log(textResults)
-  
-// };
-// some();
+const async = require('async');
+const fs = require('fs');
+const https = require('https');
+const createReadStream = require('fs').createReadStream
+const sleep = require('util').promisify(setTimeout);
 
 
 
@@ -202,13 +82,49 @@ app.post('/upload/', cors(corsOptions), upload.single('file'), async (req,res)=>
     // actually uploading the file onto blob storage (fileData, fileSize)
     // await actually pauses this code until we get success or error
     await blockBlobClient.upload(req.file.buffer, req.file.size);
+    const imageUrl = blockBlobClient.url + "?" + sasToken;
     res.status(200).send({ message: "File uploaded to Azure Blob Storage." });
+    const readResults = await extractTextFromImage(computerVisionClient, imageUrl);
+    printExtractedText(readResults)
   }catch(e) { 
     console.log("Error:", e);
     res.status(500).send("Error uploading file to Azure Blob Storage.");
   }
 
 });
+
+async function extractTextFromImage(computerVisionClient, imageUrl) {
+  let result = await computerVisionClient.read(imageUrl);
+  let operation = result.operationLocation.split('/').slice(-1)[0];
+
+  while(result.status !== "succeeded") { 
+    // this is called polling
+    // from time to time, we need to check if operation was completed successfully
+    await sleep(1000);
+    result = await computerVisionClient.getReadResult(operation);
+  } 
+  return result.analyzeResult.readResults;
+}
+
+
+async function printExtractedText(readResults) { 
+    for(page in readResults) { 
+      if(readResults.length > 1) { 
+        console.log(`==== Page: ${page}`);
+      }
+      let result = readResults[page]; 
+      if(result.lines.length) { 
+        for(let line of result.lines) { 
+          console.log(
+            line.words.map(w => w.text).join(' ')
+          )
+        }
+      }else { 
+        console.log("No recognized text.")
+      }
+    }
+}
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
