@@ -10,6 +10,9 @@ const { BlobServiceClient } = require("@azure/storage-blob");
 // initialize BlobServiceClient -> instance for using methods on service level
 const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.BLOB_CONNECTION_STRING);
 const containerName = "images";
+// can't anonymously access blob storage without a token
+const sasToken = process.env.SAS_TOKEN;
+const imageUrl = "https://aiclassroom.blob.core.windows.net/images/file-1699991780927.jpg?" + sasToken; 
 // object that provides methods to interact with a specific container('imgages') in the Blob Storage service
 const containerClient = blobServiceClient.getContainerClient(containerName);
 
@@ -49,11 +52,10 @@ const computerVisionClient = new ComputerVisionClient(
   
         // URL images containing printed and/or handwritten text. 
         // The URL can point to image files (.jpg/.png/.bmp) or multi-page files (.pdf, .tiff).
-        const printedTextSampleURL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/US_Nutritional_Fact_Label_2.svg/1200px-US_Nutritional_Fact_Label_2.svg.png';
   
         // Recognize text in printed image from a URL
-        console.log('Read printed text from URL...', printedTextSampleURL.split('/').pop());
-        const printedResult = await readTextFromURL(computerVisionClient, printedTextSampleURL);
+        console.log('Read printed text from URL...', imageUrl.split('/').pop());
+        const printedResult = await readTextFromURL(computerVisionClient, imageUrl);
         printRecText(printedResult);
   
         // Perform read and await the result from URL
